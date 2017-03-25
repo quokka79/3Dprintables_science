@@ -1,8 +1,10 @@
-# Customisable Chamber slide for microscopy
+# Customisable chamber-slide for microscopy
 
 For square glass coverslips and however many wells you think you can fit on top of it.
-Includes spots for you to add magnets to apply firm pressure to seal the well-insert to the coverslip.
-Includes tracks for you to add a gasket (make your own from PDMS or cut rubber sheet etc)
+
+Includes spots for you to add magnets to apply pressure to seal the well-insert to the coverslip. The size of these wells can be adjusted to suit the magnets you have -- smaller magnets generally work better if you actually want to remove the insert afterwards! Very strong magnets also risk warping the structure over time and could also apply too much pressure to the coverslip.
+
+Tracks are included for a gasket. You can make your own from PDMS or cut rubber sheet to fit. Gasket channel depth is customisable -- if set to negative depth then a ridge will protrude from the base of the insert, in case you find this works better with your gasket material.
 
 ![Image showing overview of pieces](https://github.com/quokka79/3Dprintables_science/blob/master/ChamberSlide-o-Matic/images/Overview%20of%20Pieces.png "Overview of pieces")
 
