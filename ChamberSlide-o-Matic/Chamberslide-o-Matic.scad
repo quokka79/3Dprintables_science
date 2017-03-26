@@ -23,7 +23,7 @@ insert_well_height = 10;
 insert_gap_with_base = 1;    // gap between any side of the lid and the outer well on the slide part
 
 num_insert_wells = 6;
-insert_well_thickness = 1.5;
+insert_well_thickness = 2;
 
 // plug-lid
 plug_lid_gap_with_insert = 0.5;       // space between the plug wall and the well wall.
@@ -38,11 +38,12 @@ gasket_depth = 1;   // positive value = depth of channel cut into insert base, t
                     // value of zero = flat insert base
 
 // magnetic wings
-magnet_thickness = 3.2;
+magnet_thickness = 3;
 magnet_radius = 5.5;
 
 show_coverslip = false; // adds a coverslip to the model -- set to false before you print!
-show_cross_section = false; // adds a box to show a cross section -- set to false before you print!
+show_cross_section_a = false; // adds a box to show a cross section through the long side of the base
+show_cross_section_b = false; // adds a box to show a cross section through the short side of the base
 
 
 // calculated dims etc -- no need to edit anything here!
@@ -71,10 +72,6 @@ lid_hole_y = coverslip_hole_y; //lid_width_y - 2*lid_thickness;
 lid_thickness_x = (lid_width_x - lid_hole_x)/2;
 lid_thickness_y = (lid_width_y - lid_hole_y)/2;
 
-echo(str("Insert wall thickness: ",lid_thickness_x," (x) ",lid_thickness_y, " (y)"));
-
-
-
 wing_width_y = 3*magnet_radius;
 wing_width_x = well_width_x + wing_width_y + wing_width_y;
 
@@ -93,8 +90,7 @@ module lid_wells() {//(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,well_ga
     // size of each well
     size_well_x = (lid_hole_x - ((num_wells_x-1)*insert_well_thickness))/num_wells_x;
     size_well_y = (lid_hole_y - ((num_wells_y-1)*insert_well_thickness))/num_wells_y;
-    
- 
+
     echo(str("well size: ",size_well_x," mm by ", size_well_y, " mm"));
     echo(str("well gap: ",insert_well_thickness, " mm"));    
     
@@ -180,8 +176,11 @@ module lid_plugs() { //(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,well_g
     
     num_wells_x = floor(pow(num_insert_wells,0.5));
     num_wells_y = ceil(num_insert_wells / num_wells_x);
+      
+    plug_extra = abs(min(0,gasket_depth)); // declarative languages are super annoying.
     
-    plug_height = insert_well_height + 0.5*base_thickness + 0.5;
+    plug_lid_thickness = 3;
+    plug_height = insert_well_height + base_thickness + plug_lid_thickness - plug_gap_from_sample + plug_extra;
     
     sub_well_x = (lid_hole_x - (num_wells_x-1)*insert_well_thickness)/num_wells_x - plug_lid_gap_with_insert;
     sub_well_y = (lid_hole_y - (num_wells_y-1)*insert_well_thickness)/num_wells_y - plug_lid_gap_with_insert;
@@ -189,12 +188,18 @@ module lid_plugs() { //(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,well_g
     well_vol = floor((sub_well_x * sub_well_y * plug_gap_from_sample) + 3.141*plug_height);
     echo(str("max. volume (with lid): ",well_vol," ul per well"));
     
+
+
+    
     if (num_insert_wells > 1) {
     
         difference() {
             union() {
-                translate([-2.5,-2.5,0]) cube([lid_hole_x+5, lid_hole_y+5, plug_gap_from_sample]);
                 
+                // 'top' of the lid
+                translate([-2.5,-2.5,0]) cube([lid_hole_x+5, lid_hole_y+5, plug_lid_thickness]);
+                
+                // plugs for each well
                 for (px = [1:num_wells_x]) {
                     for (py = [1:num_wells_y]) {
                             sub_well_offset_x = (px-1)*(sub_well_x + insert_well_thickness + plug_lid_gap_with_insert) + 0.5*plug_lid_gap_with_insert;
@@ -204,9 +209,9 @@ module lid_plugs() { //(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,well_g
                             cube([sub_well_x, sub_well_y, plug_height]);
                         }
                     }
-                }
+            }
             
-            // Buffer escape tube
+            // remove buffer escape tube
             for (cx = [1:num_wells_x]) {
                 for (cy = [1:num_wells_y]) {
                         sub_well_offset_x = (cx-1)*(sub_well_x + insert_well_thickness + plug_lid_gap_with_insert) + 0.5*plug_lid_gap_with_insert + 0.5*sub_well_x;
@@ -216,6 +221,9 @@ module lid_plugs() { //(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,well_g
                          cylinder(h=plug_height+4, r1=1,r2=1);
                     }
                 }
+            
+//            // cut corner for orientation
+//            translate([-5, lid_hole_y-3 ,-5]) rotate(45) cube(10,10,10);
         }
     } else {
         difference() {
@@ -238,7 +246,6 @@ union() {
 // -----------------------------------------------------------------------
 // the main chamber
 // -----------------------------------------------------------------------
-
 color([0.95,0.35,0.75])
 difference() {
     union() {
@@ -255,10 +262,12 @@ difference() {
         translate([centre_x-wing_width_y-0.5*well_width_x,centre_y-(0.5*wing_width_y),0])
             difference() {
                 cube([wing_width_x,wing_width_y,base_well_height+base_thickness]);
-                translate([wing_width_x-0.5*wing_width_y,0.5*wing_width_y,base_well_height+base_thickness - magnet_thickness])
-                    cylinder(h=magnet_thickness+1, r1=magnet_radius, r2=magnet_radius);
+                translate([wing_width_x-0.5*wing_width_y,
+                           0.5*wing_width_y, 
+                           base_well_height + base_thickness - magnet_thickness])
+                    cylinder(h=magnet_thickness+0.5, r1=magnet_radius, r2=magnet_radius);
                 translate([0.5*wing_width_y,0.5*wing_width_y,base_well_height+base_thickness - magnet_thickness])
-                    cylinder(h=magnet_thickness+1, r1=magnet_radius, r2=magnet_radius);
+                    cylinder(h=magnet_thickness+0.5, r1=magnet_radius, r2=magnet_radius);
             }
  
     }
@@ -297,15 +306,6 @@ difference() {
 
 
 
-
-
-
-
-
-
-
-
-
 // -----------------------------------------------------------------------
 // a fake coverslip
 // -----------------------------------------------------------------------
@@ -319,48 +319,44 @@ if (show_coverslip) {
 
 
 
-
-
-
-
-
-
-
-
-
 // -----------------------------------------------------------------------
 // the insert
 // -----------------------------------------------------------------------
 
 //// remove commenting here to show the insert assembled with the base
-//    translate([centre_x*2,0, insert_well_height+base_thickness + 1])
+//    translate([centre_x*2,0, insert_well_height + base_thickness + coverslip_dims_z + 1])
 //    rotate([0,180,0])
 
 // commenting next line when showing the insert assembled with the base
 translate([0,1.5*coverslip_dims_y,0])
 
-//color([0.95,0.75,0.25,0.1])
+color([0.95,0.75,0.25,1.0])
 difference() {
     
     union() { // combines a box for the buffer/sample + magnet wings + (optional) raised ridges
         
         
         // insert outer box
-        translate([centre_x - 0.5*lid_width_x , centre_y - 0.5*lid_width_y, base_thickness])
-            cube([lid_width_x, lid_width_y, insert_well_height]);
+        translate([centre_x - 0.5*lid_width_x , centre_y - 0.5*lid_width_y, 0])
+            cube([lid_width_x, lid_width_y, insert_well_height + base_thickness]);
     
         
         // magnetic wings
-        translate([centre_x-wing_width_y-0.5*well_width_x,centre_y-(0.5*wing_width_y),0])
+        translate([centre_x-wing_width_y-0.5*well_width_x, centre_y-(0.5*wing_width_y), 0])
             difference() {
                 hull() {
                     translate([0,-0.5*(lid_width_y-wing_width_y),0]) cube([wing_width_x,lid_width_y, 1]);
-                    translate([0,0,insert_well_height - base_well_height-1]) cube([wing_width_x,wing_width_y, 1]);
+                    translate([0,0,insert_well_height - base_well_height - 0.5*(gasket_depth)]) cube([wing_width_x,wing_width_y, 1]);
                 }
-                translate([wing_width_x-0.5*wing_width_y, 0.5*wing_width_y, insert_well_height - base_well_height - magnet_thickness])
-                    cylinder(h=magnet_thickness+1, r1=magnet_radius, r2=magnet_radius);
-                translate([0.5*wing_width_y, 0.5*wing_width_y, insert_well_height - base_well_height - magnet_thickness])
-                    cylinder(h=magnet_thickness+1, r1=magnet_radius, r2=magnet_radius);
+                translate([wing_width_x-0.5*wing_width_y,
+                           0.5*wing_width_y,
+                           //insert_well_height - base_well_height - 0.5*(gasket_depth) - magnet_thickness
+                           insert_well_height - base_well_height - magnet_thickness + 0.5])
+                    cylinder(h=magnet_thickness+0.5, r1=magnet_radius, r2=magnet_radius);
+                translate([0.5*wing_width_y,
+                           0.5*wing_width_y,
+                           insert_well_height - base_well_height - magnet_thickness + 0.5])
+                    cylinder(h=magnet_thickness+0.5, r1=magnet_radius, r2=magnet_radius);
             }
             
         // gasket ridges
@@ -394,7 +390,7 @@ difference() {
 // -----------------------------------------------------------------------
 
 //// remove commenting here to show the insert assembled with the base
-//translate([centre_x*2,0, insert_well_height+ 3* base_thickness + 1])
+//translate([centre_x*2,0, insert_well_height + 3* base_thickness +coverslip_dims_z + 1.1])
 //rotate([0,180,0])
 
 // commenting next line when showing the insert assembled with the base
@@ -411,7 +407,8 @@ color([0.15,0.85,0.75])
 
 //close of cross section
 }
-if (show_cross_section) translate([-5,-37.5,-5]) color([1,0,0]) cube([100,50,50]); // cross section block
+if (show_cross_section_a) translate([-5,-37.5,-5]) color([1,0,0]) cube([100,50,50]); // cross section block
+if (show_cross_section_b) translate([-5,-5,-5]) color([1,0,0]) cube([0.5*base_width,50,50]); // cross section block
 }
 //close of cross section
 
