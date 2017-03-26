@@ -3,7 +3,7 @@ $fn=50;
 // size of the coverglass
 coverslip_dims_x = 24;
 coverslip_dims_y = 24;
-coverslip_dims_z = 0.17;
+coverslip_dims_z = 0.17; // glass thickness
 
 
 coverslip_inner_brim_width = 2.5; //2.5; // support space beneath coverslip edges
