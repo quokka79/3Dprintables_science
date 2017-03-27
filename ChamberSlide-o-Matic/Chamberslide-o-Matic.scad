@@ -22,7 +22,7 @@ base_well_height = 5;
 insert_well_height = 10;
 insert_gap_with_base = 1;    // gap between any side of the lid and the outer well on the slide part
 
-num_insert_wells = 6;
+num_insert_wells = 4;
 insert_well_thickness = 2;
 
 // plug-lid
@@ -42,9 +42,10 @@ magnet_thickness = 3;
 magnet_radius = 5.5;
 
 show_coverslip = false; // adds a coverslip to the model -- set to false before you print!
+
 show_cross_section_a = false; // adds a box to show a cross section through the long side of the base
 show_cross_section_b = false; // adds a box to show a cross section through the short side of the base
-
+cross_section_height_tweak = 1.00; // adjust this to change the gap between the assembled components -- helps for display!
 
 // calculated dims etc -- no need to edit anything here!
 
@@ -122,10 +123,10 @@ module lid_wells() {//(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,well_ga
 // This module generates a gasket grid
 module inner_gasket() { //(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,well_gap=3.5,gasket_width=2, outside_penetration) {
     
-    z_offset = (insert_well_height + base_thickness) - gasket_depth;
-    
-    echo(str("z offset = ",z_offset));
-    
+    // if (gasket_depth != 0) {
+    offset_extra = 2*abs(min(0,gasket_depth)); // declarative languages are super annoying.
+    z_offset = (insert_well_height + base_thickness) - gasket_depth - offset_extra;
+      
     // the outer gasket is positioned so that the centre of the gasket runs down the middle of the 'brim' supporting the coverslip
     translate([centre_x - 0.5*(lid_hole_x + coverslip_inner_brim_width + gasket_width),
                centre_y - 0.5*(lid_hole_y + coverslip_inner_brim_width + gasket_width),
@@ -135,11 +136,11 @@ module inner_gasket() { //(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,wel
            
            // outer gasket
            difference() {
-                  cube([insert_gasket_bounding_box_x, insert_gasket_bounding_box_y, abs(gasket_depth)]);
+                  cube([insert_gasket_bounding_box_x, insert_gasket_bounding_box_y, 2*abs(gasket_depth)]);
                     translate([gasket_width, gasket_width, -abs(gasket_depth)]) {
                         cube([insert_gasket_bounding_box_x - 2*gasket_width,
                                insert_gasket_bounding_box_y - 2*gasket_width,
-                               3*abs(gasket_depth)]);
+                               4*abs(gasket_depth)]);
                     }
                 }
         
@@ -157,12 +158,12 @@ module inner_gasket() { //(num_wells=4,x_bounds=30, y_bounds=30, z_bounds=10,wel
                 
                 for (gx = [1:num_wells_x - 1]) {
                     translate([inital_offset + (gx * per_x_offset) +  (gx-1)*(insert_well_thickness - 0.5*(insert_well_thickness - gasket_width)), 0, 0])
-                        cube([gasket_width, insert_gasket_bounding_box_y, abs(gasket_depth)]);
+                        cube([gasket_width, insert_gasket_bounding_box_y, 2*abs(gasket_depth)]);
                     }
                 // gasket strips along y
                 for (gy = [1:num_wells_y - 1]) {
                     translate([ 0, inital_offset + (gy * per_y_offset) +  (gy-1)*(insert_well_thickness - 0.5*(insert_well_thickness - gasket_width)), 0])
-                        cube([insert_gasket_bounding_box_x, gasket_width, abs(gasket_depth)]);
+                        cube([insert_gasket_bounding_box_x, gasket_width, 2*abs(gasket_depth)]);
                 }
             }
         }
@@ -324,7 +325,7 @@ if (show_coverslip) {
 // -----------------------------------------------------------------------
 
 //// remove commenting here to show the insert assembled with the base
-//    translate([centre_x*2,0, insert_well_height + base_thickness + coverslip_dims_z + 1])
+//    translate([centre_x*2,0, insert_well_height + base_thickness + coverslip_dims_z + cross_section_height_tweak - min(0,gasket_depth)])
 //    rotate([0,180,0])
 
 // commenting next line when showing the insert assembled with the base
@@ -346,22 +347,21 @@ difference() {
             difference() {
                 hull() {
                     translate([0,-0.5*(lid_width_y-wing_width_y),0]) cube([wing_width_x,lid_width_y, 1]);
-                    translate([0,0,insert_well_height - base_well_height - 0.5*(gasket_depth)]) cube([wing_width_x,wing_width_y, 1]);
+                    translate([0,0,insert_well_height - base_well_height]) cube([wing_width_x,wing_width_y, 1 + abs(min(0,gasket_depth))]);
                 }
                 translate([wing_width_x-0.5*wing_width_y,
                            0.5*wing_width_y,
                            //insert_well_height - base_well_height - 0.5*(gasket_depth) - magnet_thickness
-                           insert_well_height - base_well_height - magnet_thickness + 0.5])
+                           insert_well_height - base_well_height - magnet_thickness + 1 + abs(min(0,gasket_depth))])
                     cylinder(h=magnet_thickness+0.5, r1=magnet_radius, r2=magnet_radius);
                 translate([0.5*wing_width_y,
                            0.5*wing_width_y,
-                           insert_well_height - base_well_height - magnet_thickness + 0.5])
+                           insert_well_height - base_well_height - magnet_thickness + 1 + abs(min(0,gasket_depth))])
                     cylinder(h=magnet_thickness+0.5, r1=magnet_radius, r2=magnet_radius);
             }
             
         // gasket ridges
         if (gasket_depth < 0) {
-            translate([0,0,gasket_depth])
               inner_gasket();
         }      
     }
@@ -376,7 +376,6 @@ difference() {
     
     // gasket channel
     if (gasket_depth >= 0) {
-        //translate([0,0,0.5*gasket_depth])
               inner_gasket();
           }
           
@@ -390,7 +389,7 @@ difference() {
 // -----------------------------------------------------------------------
 
 //// remove commenting here to show the insert assembled with the base
-//translate([centre_x*2,0, insert_well_height + 3* base_thickness +coverslip_dims_z + 1.1])
+//translate([centre_x*2,0, insert_well_height + 3* base_thickness +coverslip_dims_z + 1.2*cross_section_height_tweak - min(0,gasket_depth)])
 //rotate([0,180,0])
 
 // commenting next line when showing the insert assembled with the base
